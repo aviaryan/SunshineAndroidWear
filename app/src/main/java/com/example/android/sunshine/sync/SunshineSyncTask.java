@@ -39,6 +39,10 @@ public class SunshineSyncTask {
      *
      * @param context Used to access utility methods and the ContentResolver
      */
+
+    public static float highTemp;
+    public static float lowTemp;
+
     synchronized public static void syncWeather(Context context) {
 
         try {
@@ -77,7 +81,10 @@ public class SunshineSyncTask {
                         WeatherContract.WeatherEntry.CONTENT_URI,
                         weatherValues);
 
-                Log.v("DBG", "weather updated");
+                highTemp = Float.parseFloat(weatherValues[0].get(WeatherContract.WeatherEntry.COLUMN_MAX_TEMP) + "");
+                lowTemp = Float.parseFloat(weatherValues[0].get(WeatherContract.WeatherEntry.COLUMN_MIN_TEMP) + "");
+
+                Log.v("DBG", "weather updated\nhigh: " + highTemp);
 
                 /*
                  * Finally, after we insert data into the ContentProvider, determine whether or not

@@ -88,8 +88,8 @@ public class SunshineSyncIntentService extends IntentService implements
 
     private void sendDataToWearable(){
         PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/sunshine_update");
-        putDataMapReq.getDataMap().putInt("high", 29);
-        putDataMapReq.getDataMap().putInt("low", 24);
+        putDataMapReq.getDataMap().putInt("high", (int) SunshineSyncTask.highTemp);
+        putDataMapReq.getDataMap().putInt("low", (int) SunshineSyncTask.lowTemp);
         // change every time
         Calendar calendar = Calendar.getInstance();
         putDataMapReq.getDataMap().putLong("time", calendar.getTimeInMillis());
