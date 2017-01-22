@@ -21,6 +21,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -41,6 +43,7 @@ import android.view.WindowInsets;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.wearable.Asset;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
@@ -49,6 +52,7 @@ import com.google.android.gms.wearable.DataMap;
 import com.google.android.gms.wearable.DataMapItem;
 import com.google.android.gms.wearable.Wearable;
 
+import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.util.Calendar;
 import java.util.TimeZone;
@@ -123,6 +127,7 @@ public class MyWatchFace extends CanvasWatchFaceService {
         float mYOffset;
         String highTemp = "N/A";
         String lowTemp = "N/A";
+        Bitmap weatherBitmap = null;
 
         GoogleApiClient googleApiClient;
 
@@ -302,6 +307,14 @@ public class MyWatchFace extends CanvasWatchFaceService {
             // low temperature
             mXOffset += mTempHighPaint.measureText(highTemp);
             canvas.drawText(lowTemp, mXOffset + 20, mYOffset + 150, mTempLowPaint);
+
+            // image
+            if (weatherBitmap != null) {
+                int bh = weatherBitmap.getScaledHeight(canvas);
+                int bw = weatherBitmap.getScaledWidth(canvas);
+                mXOffset = bounds.centerX() - mTempHighPaint.measureText(highTemp)/2;
+                canvas.drawBitmap(weatherBitmap, mXOffset - bw - 20, mYOffset + 150 - bh + 20, null);
+            }
         }
 
         /**
@@ -364,12 +377,42 @@ public class MyWatchFace extends CanvasWatchFaceService {
                         Log.v("DBG", "" + dataMap.getInt("high"));
                         highTemp = "" + dataMap.getInt("high");
                         lowTemp = "" + dataMap.getInt("low");
-                        invalidate();
+                        final Asset image = dataMap.getAsset("image");
+                        // not on UI thread
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                weatherBitmap = loadBitmapFromAsset(image);
+                                // redraw
+                                invalidate();
+                            }
+                        }).start();
                     }
                 } else if (event.getType() == DataEvent.TYPE_DELETED) {
                     // DataItem deleted
                 }
             }
+        }
+
+        public Bitmap loadBitmapFromAsset(Asset asset) {
+            if (asset == null) {
+                throw new IllegalArgumentException("Asset must be non-null");
+            }
+            ConnectionResult result = googleApiClient.blockingConnect(3000, TimeUnit.MILLISECONDS);
+            if (!result.isSuccess()) {
+                return null;
+            }
+            // convert asset into a file descriptor and block until it's ready
+            InputStream assetInputStream = Wearable.DataApi.getFdForAsset(
+                    googleApiClient, asset).await().getInputStream();
+            googleApiClient.disconnect();
+
+            if (assetInputStream == null) {
+                Log.w("DBG", "Requested an unknown Asset.");
+                return null;
+            }
+            // decode the stream into a bitmap
+            return BitmapFactory.decodeStream(assetInputStream);
         }
     }
 }

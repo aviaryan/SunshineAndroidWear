@@ -42,6 +42,7 @@ public class SunshineSyncTask {
 
     public static float highTemp;
     public static float lowTemp;
+    public static int weatherId;
 
     synchronized public static void syncWeather(Context context) {
 
@@ -83,6 +84,7 @@ public class SunshineSyncTask {
 
                 highTemp = Float.parseFloat(weatherValues[0].get(WeatherContract.WeatherEntry.COLUMN_MAX_TEMP) + "");
                 lowTemp = Float.parseFloat(weatherValues[0].get(WeatherContract.WeatherEntry.COLUMN_MIN_TEMP) + "");
+                weatherId = Integer.parseInt(weatherValues[0].get(WeatherContract.WeatherEntry.COLUMN_WEATHER_ID) + "");
 
                 Log.v("DBG", "weather updated\nhigh: " + highTemp);
 

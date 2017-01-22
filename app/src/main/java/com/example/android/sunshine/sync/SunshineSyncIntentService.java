@@ -17,16 +17,21 @@ package com.example.android.sunshine.sync;
 
 import android.app.IntentService;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
+import com.example.android.sunshine.R;
+import com.example.android.sunshine.utilities.SunshineWeatherUtils;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResultCallbacks;
 import com.google.android.gms.common.api.Status;
+import com.google.android.gms.wearable.Asset;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.MessageApi;
 import com.google.android.gms.wearable.Node;
@@ -35,6 +40,7 @@ import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 
+import java.io.ByteArrayOutputStream;
 import java.util.Calendar;
 
 /**
@@ -90,6 +96,12 @@ public class SunshineSyncIntentService extends IntentService implements
         PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/sunshine_update");
         putDataMapReq.getDataMap().putInt("high", (int) SunshineSyncTask.highTemp);
         putDataMapReq.getDataMap().putInt("low", (int) SunshineSyncTask.lowTemp);
+        // image
+        Bitmap bitmap = BitmapFactory.decodeResource(
+                getResources(), SunshineWeatherUtils.getSmallArtResourceIdForWeatherCondition(SunshineSyncTask.weatherId)
+        );
+        Asset asset = createAssetFromBitmap(bitmap);
+        putDataMapReq.getDataMap().putAsset("image", asset);
         // change every time
         Calendar calendar = Calendar.getInstance();
         putDataMapReq.getDataMap().putLong("time", calendar.getTimeInMillis());
@@ -107,6 +119,12 @@ public class SunshineSyncIntentService extends IntentService implements
             }
         });
         Log.v("DBG", "sent to wear");
+    }
+
+    private static Asset createAssetFromBitmap(Bitmap bitmap) {
+        final ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteStream);
+        return Asset.createFromBytes(byteStream.toByteArray());
     }
     /* ****** */
 }
