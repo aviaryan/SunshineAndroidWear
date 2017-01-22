@@ -90,6 +90,8 @@ public class MyWatchFace extends CanvasWatchFaceService {
         Paint mBackgroundPaint;
         Paint mTextPaint;
         Paint mSmallTextPaint;
+        Paint mTempHighPaint;
+        Paint mTempLowPaint;
         boolean mAmbient;
         Calendar mCalendar;
         final BroadcastReceiver mTimeZoneReceiver = new BroadcastReceiver() {
@@ -127,6 +129,8 @@ public class MyWatchFace extends CanvasWatchFaceService {
             mTextPaint = createTextPaint(resources.getColor(R.color.digital_text));
             mSmallTextPaint = new Paint();
             mSmallTextPaint = createTextPaint(resources.getColor(R.color.light_digital_text));
+            mTempHighPaint = createTextPaint(resources.getColor(R.color.digital_text));
+            mTempLowPaint = createTextPaint(resources.getColor(R.color.light_digital_text));
 
             mCalendar = Calendar.getInstance();
         }
@@ -194,9 +198,12 @@ public class MyWatchFace extends CanvasWatchFaceService {
             float textSize = resources.getDimension(isRound
                     ? R.dimen.digital_text_size_round : R.dimen.digital_text_size);
             float smallTextSize = resources.getDimension(R.dimen.date_text_size);
+            float tempTextSize = resources.getDimension(R.dimen.temp_text_size);
 
             mTextPaint.setTextSize(textSize);
             mSmallTextPaint.setTextSize(smallTextSize);
+            mTempHighPaint.setTextSize(tempTextSize);
+            mTempLowPaint.setTextSize(tempTextSize);
         }
 
         @Override
@@ -218,6 +225,8 @@ public class MyWatchFace extends CanvasWatchFaceService {
                 mAmbient = inAmbientMode;
                 if (mLowBitAmbient) {
                     mTextPaint.setAntiAlias(!inAmbientMode);
+                    mSmallTextPaint.setAntiAlias(!inAmbientMode);
+                    mTempHighPaint.setAntiAlias(!inAmbientMode);
                     mSmallTextPaint.setAntiAlias(!inAmbientMode);
                 }
                 invalidate();
@@ -242,11 +251,9 @@ public class MyWatchFace extends CanvasWatchFaceService {
             mCalendar.setTimeInMillis(now);
 
             // write time
-            String text = mAmbient
-                    ? String.format("%d:%02d", mCalendar.get(Calendar.HOUR),
-                    mCalendar.get(Calendar.MINUTE))
-                    : String.format("%d:%02d:%02d", mCalendar.get(Calendar.HOUR),
-                    mCalendar.get(Calendar.MINUTE), mCalendar.get(Calendar.SECOND));
+            String text = String.format("%d:%02d", mCalendar.get(Calendar.HOUR), mCalendar.get(Calendar.MINUTE));
+                   // : String.format("%d:%02d:%02d", mCalendar.get(Calendar.HOUR),
+                   // mCalendar.get(Calendar.MINUTE), mCalendar.get(Calendar.SECOND));
             mXOffset = bounds.centerX() - mTextPaint.measureText(text)/2;
             canvas.drawText(text, mXOffset, mYOffset, mTextPaint);
 
@@ -261,6 +268,13 @@ public class MyWatchFace extends CanvasWatchFaceService {
             canvas.drawLine(bounds.centerX() - 40, mYOffset + 80, bounds.centerX() + 40, mYOffset + 80, mSmallTextPaint);
 
             // high temperature
+            String highTemp = "25";
+            mXOffset = bounds.centerX() - mTempHighPaint.measureText(highTemp)/2;
+            canvas.drawText(highTemp, mXOffset, mYOffset + 150, mTempHighPaint);
+
+            // low temperature
+            mXOffset += mTempHighPaint.measureText(highTemp);
+            canvas.drawText("15", mXOffset + 20, mYOffset + 150, mTempLowPaint);
         }
 
         /**
