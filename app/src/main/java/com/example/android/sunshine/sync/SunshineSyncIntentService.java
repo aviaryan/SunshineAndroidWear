@@ -17,6 +17,7 @@ package com.example.android.sunshine.sync;
 
 import android.app.IntentService;
 import android.content.Intent;
+import android.util.Log;
 
 /**
  * An {@link IntentService} subclass for handling asynchronous task requests in
@@ -31,5 +32,6 @@ public class SunshineSyncIntentService extends IntentService {
     @Override
     protected void onHandleIntent(Intent intent) {
         SunshineSyncTask.syncWeather(this);
+        Log.v("DBG", "intent service");
     }
 }
