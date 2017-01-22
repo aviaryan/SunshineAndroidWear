@@ -96,6 +96,9 @@ public class SunshineSyncIntentService extends IntentService implements
         PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/sunshine_update");
         putDataMapReq.getDataMap().putInt("high", (int) SunshineSyncTask.highTemp);
         putDataMapReq.getDataMap().putInt("low", (int) SunshineSyncTask.lowTemp);
+        putDataMapReq.getDataMap().putString("weather_string",
+                SunshineWeatherUtils.getStringForWeatherCondition(this, SunshineSyncTask.weatherId)
+        );
         // image
         Bitmap bitmap = BitmapFactory.decodeResource(
                 getResources(), SunshineWeatherUtils.getSmallArtResourceIdForWeatherCondition(SunshineSyncTask.weatherId)

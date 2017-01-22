@@ -114,6 +114,7 @@ public class MyWatchFace extends CanvasWatchFaceService {
         Paint mSmallTextPaint;
         Paint mTempHighPaint;
         Paint mTempLowPaint;
+        Paint mForecastTextPaint;
         boolean mAmbient;
         Calendar mCalendar;
         final BroadcastReceiver mTimeZoneReceiver = new BroadcastReceiver() {
@@ -127,6 +128,7 @@ public class MyWatchFace extends CanvasWatchFaceService {
         float mYOffset;
         String highTemp = "N/A";
         String lowTemp = "N/A";
+        String weatherString = "N/A";
         Bitmap weatherBitmap = null;
 
         GoogleApiClient googleApiClient;
@@ -158,6 +160,7 @@ public class MyWatchFace extends CanvasWatchFaceService {
             mSmallTextPaint = createTextPaint(resources.getColor(R.color.light_digital_text));
             mTempHighPaint = createTextPaint(resources.getColor(R.color.digital_text));
             mTempLowPaint = createTextPaint(resources.getColor(R.color.light_digital_text));
+            mForecastTextPaint = createTextPaint(resources.getColor(R.color.light_grey));
 
             mCalendar = Calendar.getInstance();
             googleApiClient = new GoogleApiClient.Builder(MyWatchFace.this)
@@ -232,11 +235,13 @@ public class MyWatchFace extends CanvasWatchFaceService {
                     ? R.dimen.digital_text_size_round : R.dimen.digital_text_size);
             float smallTextSize = resources.getDimension(R.dimen.date_text_size);
             float tempTextSize = resources.getDimension(R.dimen.temp_text_size);
+            float forecastTextSize = resources.getDimension(R.dimen.forecast_text_size);
 
             mTextPaint.setTextSize(textSize);
             mSmallTextPaint.setTextSize(smallTextSize);
             mTempHighPaint.setTextSize(tempTextSize);
             mTempLowPaint.setTextSize(tempTextSize);
+            mForecastTextPaint.setTextSize(forecastTextSize);
         }
 
         @Override
@@ -261,6 +266,7 @@ public class MyWatchFace extends CanvasWatchFaceService {
                     mSmallTextPaint.setAntiAlias(!inAmbientMode);
                     mTempHighPaint.setAntiAlias(!inAmbientMode);
                     mSmallTextPaint.setAntiAlias(!inAmbientMode);
+                    mForecastTextPaint.setAntiAlias(!inAmbientMode);
                 }
                 invalidate();
             }
@@ -309,11 +315,15 @@ public class MyWatchFace extends CanvasWatchFaceService {
             canvas.drawText(lowTemp, mXOffset + 20, mYOffset + 150, mTempLowPaint);
 
             // image
-            if (weatherBitmap != null) {
+            if (weatherBitmap != null && !isInAmbientMode()) {
                 int bh = weatherBitmap.getScaledHeight(canvas);
                 int bw = weatherBitmap.getScaledWidth(canvas);
                 mXOffset = bounds.centerX() - mTempHighPaint.measureText(highTemp)/2;
                 canvas.drawBitmap(weatherBitmap, mXOffset - bw - 20, mYOffset + 150 - bh + 20, null);
+            } else if (isInAmbientMode()) {
+                canvas.drawText(weatherString,
+                        bounds.centerX() - mForecastTextPaint.measureText(weatherString)/2,
+                        mYOffset + 200, mForecastTextPaint);
             }
         }
 
@@ -377,6 +387,7 @@ public class MyWatchFace extends CanvasWatchFaceService {
                         Log.v("DBG", "" + dataMap.getInt("high"));
                         highTemp = "" + dataMap.getInt("high");
                         lowTemp = "" + dataMap.getInt("low");
+                        weatherString = "" + dataMap.getString("weather_string");
                         final Asset image = dataMap.getAsset("image");
                         // not on UI thread
                         new Thread(new Runnable() {
