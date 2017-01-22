@@ -17,21 +17,96 @@ package com.example.android.sunshine.sync;
 
 import android.app.IntentService;
 import android.content.Intent;
+import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
+
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
+import com.google.android.gms.common.api.ResultCallbacks;
+import com.google.android.gms.common.api.Status;
+import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.MessageApi;
+import com.google.android.gms.wearable.Node;
+import com.google.android.gms.wearable.NodeApi;
+import com.google.android.gms.wearable.PutDataMapRequest;
+import com.google.android.gms.wearable.PutDataRequest;
+import com.google.android.gms.wearable.Wearable;
+
+import java.util.Calendar;
 
 /**
  * An {@link IntentService} subclass for handling asynchronous task requests in
  * a service on a separate handler thread.
  */
-public class SunshineSyncIntentService extends IntentService {
+public class SunshineSyncIntentService extends IntentService implements
+        GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener {
+
+    GoogleApiClient googleClient;
 
     public SunshineSyncIntentService() {
         super("SunshineSyncIntentService");
     }
 
     @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        // Build a new GoogleApiClient for the Wearable API
+        googleClient = new GoogleApiClient.Builder(this)
+                .addApi(Wearable.API)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .build();
+
+        googleClient.connect();
+        return super.onStartCommand(intent, flags, startId);
+    }
+
+    @Override
     protected void onHandleIntent(Intent intent) {
         SunshineSyncTask.syncWeather(this);
+        sendDataToWearable();
         Log.v("DBG", "intent service");
     }
+
+    @Override
+    public void onConnected(@Nullable Bundle bundle) {
+        // sendDataToWearable();
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+
+    }
+
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+
+    }
+
+    private void sendDataToWearable(){
+        PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/sunshine_update");
+        putDataMapReq.getDataMap().putInt("high", 29);
+        putDataMapReq.getDataMap().putInt("low", 24);
+        // change every time
+        Calendar calendar = Calendar.getInstance();
+        putDataMapReq.getDataMap().putLong("time", calendar.getTimeInMillis());
+        // send
+        PutDataRequest putDataReq = putDataMapReq.asPutDataRequest().setUrgent();
+        Wearable.DataApi.putDataItem(googleClient, putDataReq).setResultCallback(new ResultCallbacks<DataApi.DataItemResult>() {
+            @Override
+            public void onSuccess(@NonNull DataApi.DataItemResult dataItemResult) {
+                Log.v("DBG", "success" + dataItemResult.toString());
+            }
+
+            @Override
+            public void onFailure(@NonNull Status status) {
+                Log.v("DBG", "fail" + status);
+            }
+        });
+        Log.v("DBG", "sent to wear");
+    }
+    /* ****** */
 }

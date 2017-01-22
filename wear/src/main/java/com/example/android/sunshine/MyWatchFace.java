@@ -29,11 +29,25 @@ import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.provider.ContactsContract;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.wearable.watchface.CanvasWatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
+import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.WindowInsets;
 
+
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.DataEvent;
+import com.google.android.gms.wearable.DataEventBuffer;
+import com.google.android.gms.wearable.DataItem;
+import com.google.android.gms.wearable.DataMap;
+import com.google.android.gms.wearable.DataMapItem;
+import com.google.android.gms.wearable.Wearable;
 
 import java.lang.ref.WeakReference;
 import java.util.Calendar;
@@ -52,7 +66,7 @@ public class MyWatchFace extends CanvasWatchFaceService {
      * Update rate in milliseconds for interactive mode. We update once a second since seconds are
      * displayed in interactive mode.
      */
-    private static final long INTERACTIVE_UPDATE_RATE_MS = TimeUnit.SECONDS.toMillis(1);
+    private static final long INTERACTIVE_UPDATE_RATE_MS = TimeUnit.SECONDS.toMillis(60);
 
     /**
      * Handler message id for updating the time periodically in interactive mode.
@@ -84,7 +98,11 @@ public class MyWatchFace extends CanvasWatchFaceService {
         }
     }
 
-    private class Engine extends CanvasWatchFaceService.Engine {
+    private class Engine extends CanvasWatchFaceService.Engine implements
+            GoogleApiClient.ConnectionCallbacks,
+            GoogleApiClient.OnConnectionFailedListener,
+            DataApi.DataListener {
+
         final Handler mUpdateTimeHandler = new EngineHandler(this);
         boolean mRegisteredTimeZoneReceiver = false;
         Paint mBackgroundPaint;
@@ -103,6 +121,10 @@ public class MyWatchFace extends CanvasWatchFaceService {
         };
         float mXOffset;
         float mYOffset;
+        String highTemp = "N/A";
+        String lowTemp = "N/A";
+
+        GoogleApiClient googleApiClient;
 
         /**
          * Whether the display supports fewer bits for each color in ambient mode. When true, we
@@ -133,6 +155,12 @@ public class MyWatchFace extends CanvasWatchFaceService {
             mTempLowPaint = createTextPaint(resources.getColor(R.color.light_digital_text));
 
             mCalendar = Calendar.getInstance();
+            googleApiClient = new GoogleApiClient.Builder(MyWatchFace.this)
+                        .addApi(Wearable.API)
+                        .addConnectionCallbacks(this)
+                        .addOnConnectionFailedListener(this)
+                        .build();
+            googleApiClient.connect();
         }
 
         @Override
@@ -268,13 +296,12 @@ public class MyWatchFace extends CanvasWatchFaceService {
             canvas.drawLine(bounds.centerX() - 40, mYOffset + 80, bounds.centerX() + 40, mYOffset + 80, mSmallTextPaint);
 
             // high temperature
-            String highTemp = "25";
             mXOffset = bounds.centerX() - mTempHighPaint.measureText(highTemp)/2;
             canvas.drawText(highTemp, mXOffset, mYOffset + 150, mTempHighPaint);
 
             // low temperature
             mXOffset += mTempHighPaint.measureText(highTemp);
-            canvas.drawText("15", mXOffset + 20, mYOffset + 150, mTempLowPaint);
+            canvas.drawText(lowTemp, mXOffset + 20, mYOffset + 150, mTempLowPaint);
         }
 
         /**
@@ -306,6 +333,42 @@ public class MyWatchFace extends CanvasWatchFaceService {
                 long delayMs = INTERACTIVE_UPDATE_RATE_MS
                         - (timeMs % INTERACTIVE_UPDATE_RATE_MS);
                 mUpdateTimeHandler.sendEmptyMessageDelayed(MSG_UPDATE_TIME, delayMs);
+            }
+        }
+
+        @Override
+        public void onConnected(@Nullable Bundle bundle) {
+            Log.v("DBG", "wear connected");
+            Wearable.DataApi.addListener(googleApiClient, this);
+        }
+
+        @Override
+        public void onConnectionSuspended(int i) {
+
+        }
+
+        @Override
+        public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+
+        }
+
+        @Override
+        public void onDataChanged(DataEventBuffer dataEvents) {
+            Log.v("DBG", "in watch");
+            for (DataEvent event : dataEvents) {
+                if (event.getType() == DataEvent.TYPE_CHANGED) {
+                    // DataItem changed
+                    DataItem item = event.getDataItem();
+                    if (item.getUri().getPath().compareTo("/sunshine_update") == 0) {
+                        DataMap dataMap = DataMapItem.fromDataItem(item).getDataMap();
+                        Log.v("DBG", "" + dataMap.getInt("high"));
+                        highTemp = "" + dataMap.getInt("high");
+                        lowTemp = "" + dataMap.getInt("low");
+                        invalidate();
+                    }
+                } else if (event.getType() == DataEvent.TYPE_DELETED) {
+                    // DataItem deleted
+                }
             }
         }
     }

@@ -17,6 +17,7 @@ package com.example.android.sunshine.sync;
 
 import android.content.Context;
 import android.os.AsyncTask;
+import android.util.Log;
 
 import com.firebase.jobdispatcher.Job;
 import com.firebase.jobdispatcher.JobParameters;
@@ -46,6 +47,7 @@ public class SunshineFirebaseJobService extends JobService {
             protected Void doInBackground(Void... voids) {
                 Context context = getApplicationContext();
                 SunshineSyncTask.syncWeather(context);
+                Log.v("DBG", "sync firebase");
                 jobFinished(jobParameters, false);
                 return null;
             }
